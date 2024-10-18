@@ -1,5 +1,6 @@
 # 0.まえおき
-[オリジナルはこちら](https://github.com/yxlllc/contentvec)  
+[フォーク元はこちら](https://github.com/yxlllc/contentvec)  
+[公式はこちら]([https://github.com/yxlllc/contentvec](https://github.com/auspicious3000/contentvec) 
 本リポジトリはフォーク元のcontentvec学習の日本語版です。  
 Linux環境の想定で書いてます。windows環境で構築する際は各所読み替えてください。  
 
