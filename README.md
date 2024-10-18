@@ -1,7 +1,7 @@
 # 0.まえおき
-[オリジナルはこちら](https://github.com/yxlllc/contentvec)
-本リポジトリはフォーク元のcontentvec学習の日本語版です。
-Linux環境の想定で書いてます。windows環境で構築する際は各所読み替えてください。
+[オリジナルはこちら](https://github.com/yxlllc/contentvec)  
+本リポジトリはフォーク元のcontentvec学習の日本語版です。  
+Linux環境の想定で書いてます。windows環境で構築する際は各所読み替えてください。  
 
 # 1.環境構築：
 ```
@@ -28,7 +28,7 @@ cd ..
 rsync -a contentvec/ fairseq/fairseq/
 
 ```
-以下モデルをダウンロードしてください。
+以下モデルをダウンロードしてください。  
 [contentvec](https://ibm.ent.box.com/s/nv35hsry0v2y595etzysgnn2amsxxb0u)
 
 
