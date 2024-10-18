@@ -24,15 +24,13 @@ apt-get install ninja-build
 cd fairseq
 pip install --editable ./
 python setup.py build_ext --inplace
-```
-
 cd ..
 rsync -a contentvec/ fairseq/fairseq/
 
 ```
-https://ibm.ent.box.com/s/nv35hsry0v2y595etzysgnn2amsxxb0u
+以下モデルをダウンロードしてください。
+[contentvec](https://ibm.ent.box.com/s/nv35hsry0v2y595etzysgnn2amsxxb0u)
 
-https://huggingface.co/TencentGameMate/chinese-hubert-large/blob/main/chinese-hubert-large-fairseq-ckpt.pt
 
 # 2.前処理
 ```
