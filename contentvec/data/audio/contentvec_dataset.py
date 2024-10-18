@@ -24,7 +24,7 @@ def load_audio(manifest_path, max_keep, min_keep):
     n_long, n_short = 0, 0
     names, inds, sizes = [], [], []
     with open(manifest_path) as f:
-        root = f.readline().strip()
+        root = os.path.abspath(f.readline().strip())  # rootをフルパスに変更
         for ind, line in enumerate(f):
             items = line.strip().split("\t")
             assert len(items) == 2, line
@@ -34,15 +34,17 @@ def load_audio(manifest_path, max_keep, min_keep):
             elif max_keep is not None and sz > max_keep:
                 n_long += 1
             else:
-                names.append(items[0])
+                # namesに追加するファイル名も絶対パスにする
+                names.append(os.path.abspath(os.path.join(root, items[0]).replace("/tmp","")))
                 inds.append(ind)
                 sizes.append(sz)
     tot = ind + 1
     logger.info((
-            f"max_keep={max_keep}, min_keep={min_keep}, "
-            f"loaded {len(names)}, skipped {n_short} short and {n_long} long, "
-            f"longest-loaded={max(sizes)}, shortest-loaded={min(sizes)}"))
+        f"max_keep={max_keep}, min_keep={min_keep}, "
+        f"loaded {len(names)}, skipped {n_short} short and {n_long} long, "
+        f"longest-loaded={max(sizes)}, shortest-loaded={min(sizes)}"))
     return root, names, inds, tot, sizes
+
 
 def load_label(label_path, inds, tot):
     with open(label_path) as f:
@@ -197,54 +199,56 @@ class ContentvecDataset(FairseqDataset):
         assert wav.ndim == 1, wav.ndim
         if self.crop:
             wav = wav[:fileLen]
-        if self.split == 'train':
-            # 1st version
-            try:
-                wav_1 = self.random_formant_f0(wav, cur_sample_rate, spk)
-            except UserWarning as e:
-                wav_1 = np.copy(wav)
-                print(f"Praat Warining - {fileName}, {e}")
-            except RuntimeError as e:
-                wav_1 = np.copy(wav)
-                print(f"Praat Error - {fileName}, {e}")
-            wav_1 = self.random_noise_volume(wav_1)
-            wav_1 = self.random_eq(wav_1, cur_sample_rate)           
-            wav_1 = torch.from_numpy(wav_1).float()
-            wav_1 = self.postprocess(wav_1, cur_sample_rate)
-            # 2nd version
-            try:
-                wav_2 = self.random_formant_f0(wav, cur_sample_rate, spk)
-            except UserWarning as e:
-                wav_2 = np.copy(wav)
-                print(f"Praat Warining - {fileName}, {e}")
-            except RuntimeError as e:
-                wav_2 = np.copy(wav)
-                print(f"Praat Error - {fileName}, {e}")
-            wav_2 = self.random_noise_volume(wav_2)
-            wav_2 = self.random_eq(wav_2, cur_sample_rate)
-            wav_2 = torch.from_numpy(wav_2).float()
-            wav_2 = self.postprocess(wav_2, cur_sample_rate)
-        elif self.split == 'valid':
-            wav_1 = torch.from_numpy(wav).float()
-            wav_1 = self.postprocess(wav_1, cur_sample_rate)
-            try:
-                wav_2 = self.random_formant_f0(wav, cur_sample_rate, spk)
-            except UserWarning as e:
-                wav_2 = np.copy(wav)
-                print(f"Praat warining - {fileName}, {e}")
-            except RuntimeError as e:
-                wav_2 = np.copy(wav)
-                print(f"Praat Error - {fileName}, {e}")
-            wav_2 = self.random_noise_volume(wav_2)
-            wav_2 = self.random_eq(wav_2, cur_sample_rate)
-            wav_2 = torch.from_numpy(wav_2).float()
-            wav_2 = self.postprocess(wav_2, cur_sample_rate)
+        
+        # spk2infoにspkが存在するか確認
+        if spk not in self.spk2info:
+            # キーがない場合は処理をスキップしてデフォルトの動作を行う
+            wav_1 = np.copy(wav)
+            wav_2 = np.copy(wav)
+            spk_emb = torch.zeros(256)  # デフォルト値としてゼロテンソルを返す
         else:
-            raise ValueError('Invalid dataset mode!')
-        assert len(wav_1) == len(wav_2), "Different audio lengths!"
-        spk_emb, _ = self.spk2info[spk]
-        spk_emb = torch.from_numpy(spk_emb).float()
+            if self.split == 'train':
+                # 1st version
+                try:
+                    wav_1 = self.random_formant_f0(wav, cur_sample_rate, spk)
+                except (UserWarning, RuntimeError) as e:
+                    wav_1 = np.copy(wav)
+                    print(f"Error processing {fileName}: {e}")
+                wav_1 = self.random_noise_volume(wav_1)
+                wav_1 = self.random_eq(wav_1, cur_sample_rate)
+                wav_1 = torch.from_numpy(wav_1).float()
+                wav_1 = self.postprocess(wav_1, cur_sample_rate)
+                # 2nd version
+                try:
+                    wav_2 = self.random_formant_f0(wav, cur_sample_rate, spk)
+                except (UserWarning, RuntimeError) as e:
+                    wav_2 = np.copy(wav)
+                    print(f"Error processing {fileName}: {e}")
+                wav_2 = self.random_noise_volume(wav_2)
+                wav_2 = self.random_eq(wav_2, cur_sample_rate)
+                wav_2 = torch.from_numpy(wav_2).float()
+                wav_2 = self.postprocess(wav_2, cur_sample_rate)
+            elif self.split == 'valid':
+                wav_1 = torch.from_numpy(wav).float()
+                wav_1 = self.postprocess(wav_1, cur_sample_rate)
+                try:
+                    wav_2 = self.random_formant_f0(wav, cur_sample_rate, spk)
+                except (UserWarning, RuntimeError) as e:
+                    wav_2 = np.copy(wav)
+                    print(f"Error processing {fileName}: {e}")
+                wav_2 = self.random_noise_volume(wav_2)
+                wav_2 = self.random_eq(wav_2, cur_sample_rate)
+                wav_2 = torch.from_numpy(wav_2).float()
+                wav_2 = self.postprocess(wav_2, cur_sample_rate)
+            else:
+                raise ValueError('Invalid dataset mode!')
+            
+            assert len(wav_1) == len(wav_2), "Different audio lengths!"
+            spk_emb, _ = self.spk2info[spk]
+            spk_emb = torch.from_numpy(spk_emb).float()
+
         return wav_1, wav_2, spk_emb
+
 
     def get_label(self, index, label_idx):
         if self.store_labels:
@@ -320,12 +324,17 @@ class ContentvecDataset(FairseqDataset):
         return collated_speakers
 
     def collater_audio(self, audios_1, audios_2, audio_size):
-        collated_audios_1 = audios_1[0].new_zeros(len(audios_1), audio_size)
-        collated_audios_2 = audios_2[0].new_zeros(len(audios_2), audio_size)
+        collated_audios_1 = torch.zeros((len(audios_1), audio_size), dtype=torch.float32)
+        collated_audios_2 = torch.zeros((len(audios_2), audio_size), dtype=torch.float32)
         padding_mask = (torch.BoolTensor(collated_audios_1.shape).fill_(False))
         audio_starts = [0 for _ in audios_1]
+        
         for i, (audio_1, audio_2) in enumerate(zip(audios_1, audios_2)):
             diff = len(audio_1) - audio_size
+            # numpy配列からtorch.Tensorに変換
+            audio_1 = torch.from_numpy(audio_1).float() if isinstance(audio_1, np.ndarray) else audio_1
+            audio_2 = torch.from_numpy(audio_2).float() if isinstance(audio_2, np.ndarray) else audio_2
+            
             if diff == 0:
                 collated_audios_1[i] = audio_1
                 collated_audios_2[i] = audio_2
@@ -335,7 +344,11 @@ class ContentvecDataset(FairseqDataset):
                 collated_audios_2[i] = torch.cat([audio_2, audio_2.new_full((-diff,), 0.0)])
                 padding_mask[i, diff:] = True
             else:
-                collated_audios_1[i], collated_audios_2[i], audio_starts[i] = self.crop_to_max_size(audio_1, audio_2, audio_size)
+                wav_1, wav_2, start = self.crop_to_max_size(audio_1, audio_2, audio_size)
+                collated_audios_1[i] = wav_1
+                collated_audios_2[i] = wav_2
+                audio_starts[i] = start
+
         return collated_audios_1, collated_audios_2, padding_mask, audio_starts
 
     def collater_frm_label(self, targets, audio_size, audio_starts, label_rate, pad):
