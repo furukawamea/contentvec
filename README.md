@@ -1,24 +1,27 @@
-# 1.装环境（Linux Only）：
+# 1.環境構築：
 ```
-git clone --recurse-submodules https://github.com/bfloat16/contentvec
+git clone https://github.com/furukawamea/contentvec.git
 
 cd contentvec
-conda create -n cvec python=3.10
-conda activate cvec
+conda create -n contentvec python=3.10
+conda activate contentvec
 
-pip3 install torch torchaudio
+pip install -r requirements.txt
+
+git clone https://github.com/bfloat16/fairseq.git
+git checkout 42ea630a9879121c942a7cd7b9d5e3e19e74814b
+
+apt-get install ninja-build
 
 cd fairseq
 pip install --editable ./
 python setup.py build_ext --inplace
-pip install tensorboard tensorboardX librosa soundfile resemblyzer torchfcpe colorednoise
 
 cd ..
-
-# parselmouth必须从whl安装！pypi上面是远古版本，有infinite loop的严重bug！
-pip install praat_parselmouth-0.5.0.dev0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-
 rsync -a contentvec/ fairseq/fairseq/
+
+
+
 ```
 https://ibm.ent.box.com/s/nv35hsry0v2y595etzysgnn2amsxxb0u
 
@@ -30,7 +33,7 @@ legacy系列不能用，砍掉了东西了。
 
 先试试预测cnhubertlarge的13层，炸了再说。
 
-# 2.处理数据
+# 2.前処理
 完全轮椅，可以不分说话人，一股脑扔进去处理就行了
 
 所有脚本里面合理修改线程数（一般一张卡给一个线程）
@@ -45,13 +48,8 @@ python 04_me.py
 python 05_learn_kmeans.py
 python 06_dump_km_label.py
 ```
-# 3.清理数据
-```
-rm -rf data/02_metadata_npy
-rm -rf data/03_metadata_total
-rm -rf data/04_cluster
-```
-# 4.单机多卡训练
+
+# 3.学習
 
 依据卡数修改run_pretrain_single.sh里面的distributed_training.nprocs_per_node=8
 ```
