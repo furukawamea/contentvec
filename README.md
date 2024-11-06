@@ -1,3 +1,5 @@
+※まだ更新してる※
+
 # 0.まえおき
 [フォーク元はこちら](https://github.com/yxlllc/contentvec)  
 [公式はこちら]([https://github.com/yxlllc/contentvec](https://github.com/auspicious3000/contentvec) 
